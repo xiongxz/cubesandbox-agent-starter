@@ -1,0 +1,25 @@
+version: 1
+
+build:
+  dockerfile: ./Dockerfile
+  context: .
+  platform: linux/amd64
+
+runtime:
+  start_mode: service
+  probe:
+    protocol: tcp
+    port: 49999
+    startup_timeout_sec: 60
+  healthcheck:
+    protocol: http
+    path: /healthz
+    expected_status: 200
+  expose_ports:
+    - 49999
+  writable_layer_size: 1G
+
+metadata:
+  name: cubesandbox-agent-starter
+  language: python
+  description: "Minimal CubeSandbox-compatible agent starter with health and session init endpoints."
