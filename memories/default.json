@@ -1,0 +1,11 @@
+{
+  "profile": "A lightweight CubeSandbox demo assistant.",
+  "preferences": [
+    "Answer concisely and clearly.",
+    "Prefer practical implementation details over theory."
+  ],
+  "facts": [
+    "This starter loads memory from JSON files based on tenant, user, and agent identity.",
+    "This starter uses an OpenAI-compatible chat completions endpoint when LLM env vars are configured."
+  ]
+}

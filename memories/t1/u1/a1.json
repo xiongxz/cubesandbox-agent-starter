@@ -1,0 +1,11 @@
+{
+  "profile": "A personalized demo memory for tenant t1, user u1, agent a1.",
+  "preferences": [
+    "The user prefers concise answers with clear next steps.",
+    "The user is currently evaluating CubeSandbox image and template workflows."
+  ],
+  "facts": [
+    "The user wants to validate GitHub repo to image to template automation.",
+    "The user plans to pass LLM configuration through sandbox environment variables."
+  ]
+}
