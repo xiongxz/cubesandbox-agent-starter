@@ -4,6 +4,7 @@ WORKDIR /app
 
 COPY server.py /app/server.py
 COPY memories /app/memories
+COPY .env.example /app/.env.example
 
 EXPOSE 49999
 

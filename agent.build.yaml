@@ -22,4 +22,4 @@ runtime:
 metadata:
   name: cubesandbox-agent-starter
   language: python
-  description: "Minimal CubeSandbox-compatible conversational agent starter with file-backed memory loading and OpenAI-compatible /chat support."
+  description: "Minimal CubeSandbox-compatible conversational agent starter with startup-time Markdown memory loading and OpenAI-compatible /chat support."

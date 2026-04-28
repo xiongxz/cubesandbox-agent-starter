@@ -6,8 +6,8 @@ Features:
 
 - Fixed probe port: `49999`
 - HTTP health endpoint: `GET /healthz`
-- Session initialization endpoint: `POST /session/init`
-- File-backed identity memory loading
+- Startup-time identity memory loading from local Markdown files
+- Optional manual rebind endpoint: `POST /session/init`
 - Minimal chat endpoint: `POST /chat`
 - OpenAI-compatible LLM configuration via environment variables
 - `agent.build.yaml` contract for image platform automation
@@ -16,7 +16,12 @@ Features:
 
 ```bash
 docker build -t cubesandbox-agent-starter:local .
-docker run --rm -p 49999:49999 cubesandbox-agent-starter:local
+docker run --rm -p 49999:49999 \
+  -e AGENT_TENANT_ID="t1" \
+  -e AGENT_USER_ID="u1" \
+  -e AGENT_AGENT_ID="default-agent" \
+  -e AGENT_SESSION_ID="boot-session" \
+  cubesandbox-agent-starter:local
 ```
 
 Health check:
@@ -25,7 +30,15 @@ Health check:
 curl http://localhost:49999/healthz
 ```
 
-Session init:
+Chat without calling `/session/init` first:
+
+```bash
+curl -X POST http://localhost:49999/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"message":"Summarize what you know about me."}'
+```
+
+Optional manual session rebinding:
 
 ```bash
 curl -X POST http://localhost:49999/session/init \
@@ -33,7 +46,7 @@ curl -X POST http://localhost:49999/session/init \
   -d '{"tenant_id":"t1","user_id":"u1","agent_id":"a1","session_id":"s1"}'
 ```
 
-Chat:
+Chat with a specific session id:
 
 ```bash
 curl -X POST http://localhost:49999/chat \
@@ -55,10 +68,23 @@ You can pass these env vars when the sandbox starts:
 - `LLM_SYSTEM_PROMPT`
   Optional custom system prompt
 
+## Identity environment variables
+
+These env vars are read at process startup and are used to preload the default session memory:
+
+- `AGENT_TENANT_ID`
+- `AGENT_USER_ID`
+- `AGENT_AGENT_ID`
+- `AGENT_SESSION_ID`
+
 Example:
 
 ```bash
 docker run --rm -p 49999:49999 \
+  -e AGENT_TENANT_ID="t1" \
+  -e AGENT_USER_ID="u1" \
+  -e AGENT_AGENT_ID="default-agent" \
+  -e AGENT_SESSION_ID="boot-session" \
   -e LLM_BASE_URL="https://api.openai.com/v1" \
   -e LLM_API_KEY="sk-..." \
   -e LLM_MODEL="gpt-4o-mini" \
@@ -67,16 +93,17 @@ docker run --rm -p 49999:49999 \
 
 ## Memory loading
 
-The starter loads memory from JSON files in this order:
+The starter loads memory from Markdown files in this order:
 
-1. `/app/memories/<tenant_id>/<user_id>/<agent_id>.json`
-2. `/app/memories/<tenant_id>/<user_id>.json`
-3. `/app/memories/default.json`
+1. `/app/memories/<tenant_id>/<user_id>/<agent_id>.md`
+2. `/app/memories/<tenant_id>/<user_id>.md`
+3. `/app/memories/default.md`
 
-If nothing matches, it falls back to an empty generated memory object.
+If nothing matches, it falls back to `default.md`.
 
-This repository already includes a concrete identity memory example:
+This repository already includes concrete identity memory examples:
 
 - `tenant_id=t1`
 - `user_id=u1`
-- `agent_id=a1`
+- `tenant_id=t2`
+- `user_id=u9`
