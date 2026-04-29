@@ -8,18 +8,20 @@ build:
 runtime:
   start_mode: service
   probe:
-    protocol: tcp
-    port: 49999
+    protocol: http
+    port: 49983
+    path: /health
     startup_timeout_sec: 60
   healthcheck:
     protocol: http
-    path: /healthz
-    expected_status: 200
+    path: /health
+    expected_status: 204
   expose_ports:
+    - 49983
     - 49999
   writable_layer_size: 1G
 
 metadata:
   name: cubesandbox-agent-starter
   language: python
-  description: "Minimal CubeSandbox-compatible conversational agent starter with startup-time Markdown memory loading and OpenAI-compatible /chat support."
+  description: "Minimal CubeSandbox-compatible conversational agent starter with envd on :49983, startup-time Markdown memory loading, and OpenAI-compatible /chat support on :49999."

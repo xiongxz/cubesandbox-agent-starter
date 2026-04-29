@@ -4,8 +4,10 @@ Minimal starter repository for building a CubeSandbox-compatible agent image.
 
 Features:
 
-- Fixed probe port: `49999`
-- HTTP health endpoint: `GET /healthz`
+- CubeSandbox `envd` control plane on `:49983`
+- Template probe endpoint: `GET /health -> 204`
+- Agent app port on `:49999`
+- Agent health endpoint: `GET /healthz -> 200`
 - Startup-time identity memory loading from local Markdown files
 - Optional manual rebind endpoint: `POST /session/init`
 - Minimal chat endpoint: `POST /chat`
@@ -16,7 +18,7 @@ Features:
 
 ```bash
 docker build -t cubesandbox-agent-starter:local .
-docker run --rm -p 49999:49999 \
+docker run --rm -p 49983:49983 -p 49999:49999 \
   -e AGENT_TENANT_ID="t1" \
   -e AGENT_USER_ID="u1" \
   -e AGENT_AGENT_ID="default-agent" \
@@ -24,7 +26,13 @@ docker run --rm -p 49999:49999 \
   cubesandbox-agent-starter:local
 ```
 
-Health check:
+CubeSandbox probe check:
+
+```bash
+curl -i http://localhost:49983/health
+```
+
+Agent health check:
 
 ```bash
 curl http://localhost:49999/healthz
@@ -80,7 +88,7 @@ These env vars are read at process startup and are used to preload the default s
 Example:
 
 ```bash
-docker run --rm -p 49999:49999 \
+docker run --rm -p 49983:49983 -p 49999:49999 \
   -e AGENT_TENANT_ID="t1" \
   -e AGENT_USER_ID="u1" \
   -e AGENT_AGENT_ID="default-agent" \
@@ -107,3 +115,17 @@ This repository already includes concrete identity memory examples:
 - `user_id=u1`
 - `tenant_id=t2`
 - `user_id=u2`
+
+## CubeSandbox template parameters
+
+When creating a template from this image, use the CubeSandbox control plane port for probing:
+
+```bash
+cubemastercli tpl create-from-image \
+  --image <your-image-ref> \
+  --writable-layer-size 1G \
+  --expose-port 49983 \
+  --expose-port 49999 \
+  --probe 49983 \
+  --probe-path /health
+```
