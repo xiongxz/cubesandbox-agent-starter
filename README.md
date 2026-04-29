@@ -14,10 +14,19 @@ Features:
 - OpenAI-compatible LLM configuration via environment variables
 - `agent.build.yaml` contract for image platform automation
 
+## Port layout
+
+- `49983` is reserved for CubeSandbox `envd`
+- `GET http://<host>:49983/health` must return `204`
+- `49999` is the agent application's own HTTP port
+- `GET http://<host>:49999/healthz` and `POST http://<host>:49999/chat` stay on the app side
+
+Do not make the agent app itself listen on `49983`. That port is for `envd`, not for your business endpoints.
+
 ## Run locally
 
 ```bash
-docker build -t cubesandbox-agent-starter:local .
+docker buildx build --platform linux/amd64 --load -t cubesandbox-agent-starter:local .
 docker run --rm -p 49983:49983 -p 49999:49999 \
   -e AGENT_TENANT_ID="t1" \
   -e AGENT_USER_ID="u1" \
