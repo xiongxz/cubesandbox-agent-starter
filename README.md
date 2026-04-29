@@ -11,6 +11,7 @@ Features:
 - Startup-time identity memory loading from local Markdown files
 - Optional manual rebind endpoint: `POST /session/init`
 - Minimal chat endpoint: `POST /chat`
+- Minimal code execution endpoint: `POST /exec`
 - OpenAI-compatible LLM configuration via environment variables
 - `agent.build.yaml` contract for image platform automation
 
@@ -55,6 +56,22 @@ curl -X POST http://localhost:49999/chat \
   -d '{"message":"Summarize what you know about me."}'
 ```
 
+Execute Python code:
+
+```bash
+curl -X POST http://localhost:49999/exec \
+  -H 'Content-Type: application/json' \
+  -d '{"language":"python","code":"print(1 + 2)"}'
+```
+
+Execute shell code:
+
+```bash
+curl -X POST http://localhost:49999/exec \
+  -H 'Content-Type: application/json' \
+  -d '{"language":"shell","code":"pwd && ls -la","timeout_sec":10}'
+```
+
 Optional manual session rebinding:
 
 ```bash
@@ -84,6 +101,12 @@ You can pass these env vars when the sandbox starts:
   Default: `60`
 - `LLM_SYSTEM_PROMPT`
   Optional custom system prompt
+- `EXEC_TIMEOUT_SEC`
+  Default: `15`
+- `EXEC_MAX_OUTPUT_CHARS`
+  Default: `12000`
+- `EXEC_WORKDIR`
+  Default: `/tmp/agent-workspace`
 
 ## Identity environment variables
 

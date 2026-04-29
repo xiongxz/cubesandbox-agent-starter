@@ -1,5 +1,7 @@
 import json
 import os
+import subprocess
+import time
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
@@ -21,6 +23,11 @@ AGENT_TENANT_ID = os.getenv("AGENT_TENANT_ID", "")
 AGENT_USER_ID = os.getenv("AGENT_USER_ID", "")
 AGENT_AGENT_ID = os.getenv("AGENT_AGENT_ID", "default-agent")
 AGENT_SESSION_ID = os.getenv("AGENT_SESSION_ID", "boot-session")
+EXEC_TIMEOUT_SEC = int(os.getenv("EXEC_TIMEOUT_SEC", "15"))
+EXEC_MAX_OUTPUT_CHARS = int(os.getenv("EXEC_MAX_OUTPUT_CHARS", "12000"))
+EXEC_WORKDIR = os.getenv("EXEC_WORKDIR", "/tmp/agent-workspace")
+
+os.makedirs(EXEC_WORKDIR, exist_ok=True)
 
 
 @dataclass
@@ -141,6 +148,73 @@ def call_llm(state: SessionState, user_message: str) -> dict[str, str]:
     return {"mode": "live", "reply": str(content)}
 
 
+def clamp_timeout(timeout_value: object) -> int:
+    try:
+        timeout_sec = int(timeout_value) if timeout_value is not None else EXEC_TIMEOUT_SEC
+    except (TypeError, ValueError):
+        timeout_sec = EXEC_TIMEOUT_SEC
+    return max(1, min(timeout_sec, 120))
+
+
+def truncate_output(value: str) -> str:
+    if len(value) <= EXEC_MAX_OUTPUT_CHARS:
+        return value
+    return value[:EXEC_MAX_OUTPUT_CHARS] + "\n...[truncated]..."
+
+
+def run_exec(language: str, code: str, timeout_sec: int) -> dict[str, object]:
+    language = language.lower().strip()
+    if language == "python":
+        cmd = ["python3", "-c", code]
+    elif language in {"shell", "bash", "sh"}:
+        cmd = ["sh", "-lc", code]
+    else:
+        return {
+            "status": "error",
+            "error": "unsupported language",
+            "supported_languages": ["python", "shell"],
+        }
+
+    started_at = time.time()
+    try:
+        completed = subprocess.run(
+            cmd,
+            cwd=EXEC_WORKDIR,
+            capture_output=True,
+            text=True,
+            timeout=timeout_sec,
+            check=False,
+        )
+    except subprocess.TimeoutExpired as exc:
+        duration_ms = int((time.time() - started_at) * 1000)
+        stdout = exc.stdout if isinstance(exc.stdout, str) else (exc.stdout or b"").decode("utf-8", errors="replace")
+        stderr = exc.stderr if isinstance(exc.stderr, str) else (exc.stderr or b"").decode("utf-8", errors="replace")
+        return {
+            "status": "ok",
+            "language": language,
+            "exit_code": None,
+            "timed_out": True,
+            "timeout_sec": timeout_sec,
+            "duration_ms": duration_ms,
+            "stdout": truncate_output(stdout),
+            "stderr": truncate_output(stderr),
+            "workdir": EXEC_WORKDIR,
+        }
+
+    duration_ms = int((time.time() - started_at) * 1000)
+    return {
+        "status": "ok",
+        "language": language,
+        "exit_code": completed.returncode,
+        "timed_out": False,
+        "timeout_sec": timeout_sec,
+        "duration_ms": duration_ms,
+        "stdout": truncate_output(completed.stdout),
+        "stderr": truncate_output(completed.stderr),
+        "workdir": EXEC_WORKDIR,
+    }
+
+
 class Handler(BaseHTTPRequestHandler):
     def _read_json(self) -> dict:
         content_length = int(self.headers.get("Content-Length", "0"))
@@ -178,6 +252,9 @@ class Handler(BaseHTTPRequestHandler):
             return
         if self.path == "/chat":
             self._handle_chat()
+            return
+        if self.path == "/exec":
+            self._handle_exec()
             return
 
         self._write_json(404, {"error": "not found"})
@@ -254,6 +331,28 @@ class Handler(BaseHTTPRequestHandler):
                 "reply": result["reply"],
             },
         )
+
+    def _handle_exec(self) -> None:
+        try:
+            payload = self._read_json()
+        except json.JSONDecodeError:
+            self._write_json(400, {"error": "invalid json"})
+            return
+
+        code = payload.get("code")
+        if not code or not isinstance(code, str):
+            self._write_json(400, {"error": "code is required"})
+            return
+
+        language = payload.get("language", "python")
+        timeout_sec = clamp_timeout(payload.get("timeout_sec"))
+        result = run_exec(language, code, timeout_sec)
+
+        if result.get("status") == "error":
+            self._write_json(400, result)
+            return
+
+        self._write_json(200, result)
 
     def log_message(self, format: str, *args) -> None:
         return
