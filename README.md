@@ -8,8 +8,9 @@ Features:
 - Template probe endpoint: `GET /health -> 204`
 - Agent app port on `:49999`
 - Agent health endpoint: `GET /healthz -> 200`
-- Startup-time identity memory loading from local Markdown files
-- Optional manual rebind endpoint: `POST /session/init`
+- Startup-time fallback config from environment variables
+- Runtime init endpoint: `POST /init`
+- Compatibility alias: `POST /session/init`
 - Minimal chat endpoint: `POST /chat`
 - Minimal code execution endpoint: `POST /exec`
 - OpenAI-compatible LLM configuration via environment variables
@@ -48,12 +49,38 @@ Agent health check:
 curl http://localhost:49999/healthz
 ```
 
-Chat without calling `/session/init` first:
+Chat without calling `/init` first:
 
 ```bash
 curl -X POST http://localhost:49999/chat \
   -H 'Content-Type: application/json' \
   -d '{"message":"Summarize what you know about me."}'
+```
+
+Initialize runtime config from request body:
+
+```bash
+curl -X POST http://localhost:49999/init \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "tenant_id":"t2",
+    "user_id":"u2",
+    "agent_id":"default-agent",
+    "session_id":"runtime-session",
+    "llm": {
+      "base_url":"https://api.openai.com/v1",
+      "api_key":"sk-...",
+      "model":"gpt-4o-mini"
+    }
+  }'
+```
+
+Chat after runtime init:
+
+```bash
+curl -X POST http://localhost:49999/chat \
+  -H 'Content-Type: application/json' \
+  -d '{"message":"请介绍一下你自己"}'
 ```
 
 Execute Python code:
@@ -72,7 +99,7 @@ curl -X POST http://localhost:49999/exec \
   -d '{"language":"shell","code":"pwd && ls -la","timeout_sec":10}'
 ```
 
-Optional manual session rebinding:
+Compatibility alias for older callers:
 
 ```bash
 curl -X POST http://localhost:49999/session/init \
@@ -110,7 +137,7 @@ You can pass these env vars when the sandbox starts:
 
 ## Identity environment variables
 
-These env vars are read at process startup and are used to preload the default session memory:
+These env vars are only used as fallback/default mode when `/init` has not provided a runtime config yet:
 
 - `AGENT_TENANT_ID`
 - `AGENT_USER_ID`
@@ -130,6 +157,14 @@ docker run --rm -p 49983:49983 -p 49999:49999 \
   -e LLM_MODEL="gpt-4o-mini" \
   cubesandbox-agent-starter:local
 ```
+
+## Runtime config model
+
+- `/init` is the primary runtime bootstrap API.
+- `/session/init` is a compatibility alias that calls the same logic.
+- `/chat` prefers the active runtime config loaded by `/init`.
+- If no runtime config has been loaded, `/chat` falls back to environment-variable defaults.
+- If `/chat` is called with a specific `session_id`, that session must already have been initialized.
 
 ## Memory loading
 
