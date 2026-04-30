@@ -155,46 +155,47 @@ def build_runtime_config_from_payload(payload: dict, source: str) -> RuntimeConf
     base = resolve_runtime_config()
     assert base is not None
 
-    llm_payload = payload.get("llm")
-    if not isinstance(llm_payload, dict):
-        llm_payload = {}
+    config_map = payload.get("config")
+    if not isinstance(config_map, dict):
+        raise ValueError("config must be a JSON object with string values")
 
-    memory_payload = payload.get("memory")
-    if not isinstance(memory_payload, dict):
-        memory_payload = {}
+    normalized_config: dict[str, str] = {}
+    for key, value in config_map.items():
+        if not isinstance(key, str):
+            raise ValueError("config keys must be strings")
+        if value is None:
+            normalized_config[key] = ""
+            continue
+        if not isinstance(value, str):
+            raise ValueError(f"config[{key}] must be a string")
+        normalized_config[key] = value
 
-    tenant_id = normalize_str(payload.get("tenant_id"), base.tenant_id)
-    user_id = normalize_str(payload.get("user_id"), base.user_id)
-    agent_id = normalize_str(payload.get("agent_id"), base.agent_id)
-    session_id = normalize_str(payload.get("session_id"), base.session_id)
-
-    llm_base_url = normalize_str(
-        llm_payload.get("base_url", payload.get("llm_base_url", base.llm_base_url)),
-        base.llm_base_url,
-    ).rstrip("/")
-    llm_api_key = normalize_str(
-        llm_payload.get("api_key", payload.get("llm_api_key", base.llm_api_key)),
-        base.llm_api_key,
+    session_id = normalize_str(
+        payload.get("session_id"),
+        normalized_config.get("AGENT_SESSION_ID", base.session_id),
     )
-    llm_model = normalize_str(
-        llm_payload.get("model", payload.get("llm_model", base.llm_model)),
-        base.llm_model,
-    )
+    tenant_id = normalize_str(normalized_config.get("AGENT_TENANT_ID"), base.tenant_id)
+    user_id = normalize_str(normalized_config.get("AGENT_USER_ID"), base.user_id)
+    agent_id = normalize_str(normalized_config.get("AGENT_AGENT_ID"), base.agent_id)
+
+    llm_base_url = normalize_str(normalized_config.get("LLM_BASE_URL"), base.llm_base_url).rstrip("/")
+    llm_api_key = normalize_str(normalized_config.get("LLM_API_KEY"), base.llm_api_key)
+    llm_model = normalize_str(normalized_config.get("LLM_MODEL"), base.llm_model)
     llm_timeout_sec = clamp_int(
-        llm_payload.get("timeout_sec", payload.get("llm_timeout_sec", base.llm_timeout_sec)),
+        normalized_config.get("LLM_TIMEOUT_SEC"),
         default=base.llm_timeout_sec,
         minimum=1,
         maximum=300,
     )
     llm_system_prompt = normalize_str(
-        llm_payload.get("system_prompt", payload.get("llm_system_prompt", base.llm_system_prompt)),
+        normalized_config.get("LLM_SYSTEM_PROMPT"),
         base.llm_system_prompt,
     )
 
-    memory_override = memory_payload.get("markdown", payload.get("memory_markdown"))
+    memory_override = normalized_config.get("MEMORY_MARKDOWN")
     if memory_override is not None:
         memory_text = normalize_str(memory_override).strip()
-        memory_source = normalize_str(memory_payload.get("source"), "request.memory_markdown")
+        memory_source = normalize_str(normalized_config.get("MEMORY_SOURCE"), "request.config.MEMORY_MARKDOWN")
     else:
         memory_text, memory_source = load_memory_markdown(tenant_id, user_id, agent_id)
 
@@ -412,7 +413,11 @@ class Handler(BaseHTTPRequestHandler):
             self._write_json(400, {"error": "request body must be a JSON object"})
             return
 
-        config = persist_runtime_config(build_runtime_config_from_payload(payload, source))
+        try:
+            config = persist_runtime_config(build_runtime_config_from_payload(payload, source))
+        except ValueError as exc:
+            self._write_json(400, {"error": str(exc)})
+            return
         self._write_json(
             200,
             {

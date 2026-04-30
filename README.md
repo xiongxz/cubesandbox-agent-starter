@@ -63,14 +63,14 @@ Initialize runtime config from request body:
 curl -X POST http://localhost:49999/init \
   -H 'Content-Type: application/json' \
   -d '{
-    "tenant_id":"t2",
-    "user_id":"u2",
-    "agent_id":"default-agent",
     "session_id":"runtime-session",
-    "llm": {
-      "base_url":"https://api.openai.com/v1",
-      "api_key":"sk-...",
-      "model":"gpt-4o-mini"
+    "config": {
+      "AGENT_TENANT_ID":"t2",
+      "AGENT_USER_ID":"u2",
+      "AGENT_AGENT_ID":"default-agent",
+      "LLM_BASE_URL":"https://api.openai.com/v1",
+      "LLM_API_KEY":"sk-...",
+      "LLM_MODEL":"gpt-4o-mini"
     }
   }'
 ```
@@ -104,7 +104,14 @@ Compatibility alias for older callers:
 ```bash
 curl -X POST http://localhost:49999/session/init \
   -H 'Content-Type: application/json' \
-  -d '{"tenant_id":"t1","user_id":"u1","agent_id":"a1","session_id":"s1"}'
+  -d '{
+    "session_id":"s1",
+    "config":{
+      "AGENT_TENANT_ID":"t1",
+      "AGENT_USER_ID":"u1",
+      "AGENT_AGENT_ID":"a1"
+    }
+  }'
 ```
 
 Chat with a specific session id:
@@ -165,6 +172,22 @@ docker run --rm -p 49983:49983 -p 49999:49999 \
 - `/chat` prefers the active runtime config loaded by `/init`.
 - If no runtime config has been loaded, `/chat` falls back to environment-variable defaults.
 - If `/chat` is called with a specific `session_id`, that session must already have been initialized.
+- The `/init` payload shape is:
+  - optional top-level `session_id`
+  - required top-level `config`
+  - `config` is a `map[string]string`
+- Common config keys:
+  - `AGENT_TENANT_ID`
+  - `AGENT_USER_ID`
+  - `AGENT_AGENT_ID`
+  - `AGENT_SESSION_ID`
+  - `LLM_BASE_URL`
+  - `LLM_API_KEY`
+  - `LLM_MODEL`
+  - `LLM_TIMEOUT_SEC`
+  - `LLM_SYSTEM_PROMPT`
+  - `MEMORY_MARKDOWN`
+  - `MEMORY_SOURCE`
 
 ## Memory loading
 
