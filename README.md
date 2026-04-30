@@ -63,14 +63,14 @@ Initialize runtime config from request body:
 curl -X POST http://localhost:49999/init \
   -H 'Content-Type: application/json' \
   -d '{
-    "session_id":"runtime-session",
     "config": {
-      "AGENT_TENANT_ID":"t2",
-      "AGENT_USER_ID":"u2",
-      "AGENT_AGENT_ID":"default-agent",
-      "LLM_BASE_URL":"https://api.openai.com/v1",
-      "LLM_API_KEY":"sk-...",
-      "LLM_MODEL":"gpt-4o-mini"
+      "agent_session_id":"runtime-session",
+      "agent_tenant_id":"t2",
+      "agent_user_id":"u2",
+      "agent_agent_id":"default-agent",
+      "llm_base_url":"https://api.openai.com/v1",
+      "llm_api_key":"sk-...",
+      "llm_model":"gpt-4o-mini"
     }
   }'
 ```
@@ -105,11 +105,11 @@ Compatibility alias for older callers:
 curl -X POST http://localhost:49999/session/init \
   -H 'Content-Type: application/json' \
   -d '{
-    "session_id":"s1",
     "config":{
-      "AGENT_TENANT_ID":"t1",
-      "AGENT_USER_ID":"u1",
-      "AGENT_AGENT_ID":"a1"
+      "agent_session_id":"s1",
+      "agent_tenant_id":"t1",
+      "agent_user_id":"u1",
+      "agent_agent_id":"a1"
     }
   }'
 ```
@@ -173,21 +173,21 @@ docker run --rm -p 49983:49983 -p 49999:49999 \
 - If no runtime config has been loaded, `/chat` falls back to environment-variable defaults.
 - If `/chat` is called with a specific `session_id`, that session must already have been initialized.
 - The `/init` payload shape is:
-  - optional top-level `session_id`
   - required top-level `config`
   - `config` is a `map[string]string`
+  - all config keys are normalized to lowercase before parsing
 - Common config keys:
-  - `AGENT_TENANT_ID`
-  - `AGENT_USER_ID`
-  - `AGENT_AGENT_ID`
-  - `AGENT_SESSION_ID`
-  - `LLM_BASE_URL`
-  - `LLM_API_KEY`
-  - `LLM_MODEL`
-  - `LLM_TIMEOUT_SEC`
-  - `LLM_SYSTEM_PROMPT`
-  - `MEMORY_MARKDOWN`
-  - `MEMORY_SOURCE`
+  - `agent_tenant_id`
+  - `agent_user_id`
+  - `agent_agent_id`
+  - `agent_session_id`
+  - `llm_base_url`
+  - `llm_api_key`
+  - `llm_model`
+  - `llm_timeout_sec`
+  - `llm_system_prompt`
+  - `memory_markdown`
+  - `memory_source`
 
 ## Memory loading
 

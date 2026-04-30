@@ -163,39 +163,33 @@ def build_runtime_config_from_payload(payload: dict, source: str) -> RuntimeConf
     for key, value in config_map.items():
         if not isinstance(key, str):
             raise ValueError("config keys must be strings")
-        if value is None:
-            normalized_config[key] = ""
-            continue
         if not isinstance(value, str):
             raise ValueError(f"config[{key}] must be a string")
-        normalized_config[key] = value
+        normalized_config[key.lower()] = value
 
-    session_id = normalize_str(
-        payload.get("session_id"),
-        normalized_config.get("AGENT_SESSION_ID", base.session_id),
-    )
-    tenant_id = normalize_str(normalized_config.get("AGENT_TENANT_ID"), base.tenant_id)
-    user_id = normalize_str(normalized_config.get("AGENT_USER_ID"), base.user_id)
-    agent_id = normalize_str(normalized_config.get("AGENT_AGENT_ID"), base.agent_id)
+    session_id = normalize_str(normalized_config.get("agent_session_id"), base.session_id)
+    tenant_id = normalize_str(normalized_config.get("agent_tenant_id"), base.tenant_id)
+    user_id = normalize_str(normalized_config.get("agent_user_id"), base.user_id)
+    agent_id = normalize_str(normalized_config.get("agent_agent_id"), base.agent_id)
 
-    llm_base_url = normalize_str(normalized_config.get("LLM_BASE_URL"), base.llm_base_url).rstrip("/")
-    llm_api_key = normalize_str(normalized_config.get("LLM_API_KEY"), base.llm_api_key)
-    llm_model = normalize_str(normalized_config.get("LLM_MODEL"), base.llm_model)
+    llm_base_url = normalize_str(normalized_config.get("llm_base_url"), base.llm_base_url).rstrip("/")
+    llm_api_key = normalize_str(normalized_config.get("llm_api_key"), base.llm_api_key)
+    llm_model = normalize_str(normalized_config.get("llm_model"), base.llm_model)
     llm_timeout_sec = clamp_int(
-        normalized_config.get("LLM_TIMEOUT_SEC"),
+        normalized_config.get("llm_timeout_sec"),
         default=base.llm_timeout_sec,
         minimum=1,
         maximum=300,
     )
     llm_system_prompt = normalize_str(
-        normalized_config.get("LLM_SYSTEM_PROMPT"),
+        normalized_config.get("llm_system_prompt"),
         base.llm_system_prompt,
     )
 
-    memory_override = normalized_config.get("MEMORY_MARKDOWN")
+    memory_override = normalized_config.get("memory_markdown")
     if memory_override is not None:
         memory_text = normalize_str(memory_override).strip()
-        memory_source = normalize_str(normalized_config.get("MEMORY_SOURCE"), "request.config.MEMORY_MARKDOWN")
+        memory_source = normalize_str(normalized_config.get("memory_source"), "request.config.memory_markdown")
     else:
         memory_text, memory_source = load_memory_markdown(tenant_id, user_id, agent_id)
 
