@@ -395,7 +395,7 @@ class Handler(BaseHTTPRequestHandler):
         if self.path == "/chat":
             self._handle_chat()
             return
-        if self.path == "/exec":
+        if self.path == "/execute":
             self._handle_exec()
             return
 

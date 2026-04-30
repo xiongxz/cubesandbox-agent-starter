@@ -12,7 +12,7 @@ Features:
 - Runtime init endpoint: `POST /init`
 - Compatibility alias: `POST /session/init`
 - Minimal chat endpoint: `POST /chat`
-- Minimal code execution endpoint: `POST /exec`
+- Minimal code execution endpoint: `POST /execute`
 - OpenAI-compatible LLM configuration via environment variables
 - `agent.build.yaml` contract for image platform automation
 
@@ -86,7 +86,7 @@ curl -X POST http://localhost:49999/chat \
 Execute Python code:
 
 ```bash
-curl -X POST http://localhost:49999/exec \
+curl -X POST http://localhost:49999/execute \
   -H 'Content-Type: application/json' \
   -d '{"language":"python","code":"print(1 + 2)"}'
 ```
@@ -94,7 +94,7 @@ curl -X POST http://localhost:49999/exec \
 Execute shell code:
 
 ```bash
-curl -X POST http://localhost:49999/exec \
+curl -X POST http://localhost:49999/execute \
   -H 'Content-Type: application/json' \
   -d '{"language":"shell","code":"pwd && ls -la","timeout_sec":10}'
 ```
